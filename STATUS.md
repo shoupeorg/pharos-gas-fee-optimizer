@@ -2,6 +2,16 @@
 
 Updated: 2026-10-24
 
+## Durability correction (2026-10-24)
+
+- Funding and all broadcasts remain paused. No live job, evidence capture, signing, or chain write was performed for this correction.
+- Fixed stale terminal-state persistence by committing the current transition and matching reservation ledger mutation in one storage transaction. Reservation IDs and consumed-state guards make repeated/concurrent completion idempotent.
+- Added an explicit durable per-signer submission lease. Nonce reservation, signed bytes and deterministic hash are persisted before broadcast; unresolved submissions block a different job and recover by reconciling or resending only identical bytes.
+- A known receipt without `effectiveGasPrice` now remains `BROADCAST` with `feeAccountingPending`; its conservative reservation stays held and it is never rebroadcast merely because fee accounting is incomplete.
+- Added live `eth_chainId` verification at job acceptance and again before signing/submission. Any value other than Atlantic `688689` fails before signing or broadcast.
+- Local verification after the correction: 25/25 tests passed and the production Rollup build passed. The Rollup dependency `this` rewrite warning is unchanged and non-fatal.
+- Publication/deployment of engine `gas-fee-optimizer/0.2.0-durable-submission` is the only remaining stage.
+
 ## Completed
 
 - Created separate project and reused the verified Pharos PNG and approved retro desktop styling.
@@ -21,9 +31,7 @@ Updated: 2026-10-24
 
 ## Remaining
 
-1. Obtain explicit authorization and testnet funding for `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0`: minimum `0.0021 PHRS` to cover two sequential worst-case per-job fee authorizations plus the temporary self-transfer value; recommended `0.003 PHRS`; hard application aggregate committed-spend ceiling `0.0025 PHRS`. Transfers return to the same controlled address.
-2. Capture two receipt-verified automatic demonstrations, publish evidence and verify explorer links.
-3. Commit/publish the final evidence and this status checkpoint without redeploying unless public assets change.
-4. Final remote/public audit.
+1. Publish and deploy the focused durability correction, then verify the public engine version and read-only endpoints.
+2. Only after separate authorization: fund `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0` with the previously documented bounds and capture receipt-verified demonstrations.
 
 No signer has been funded and no transaction has been signed or broadcast.

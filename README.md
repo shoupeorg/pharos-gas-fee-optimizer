@@ -10,7 +10,9 @@ A deadline-aware transaction queue for Pharos Atlantic Testnet. It waits for a u
 
 ## Safety and signing model
 
-The app never holds a user's key. A new, isolated testnet-only demo signer is stored only in Cloudflare secrets and checked against `DEMO_SIGNER_ADDRESS`. Owner actions require `OWNER_TOKEN`; public endpoints are read-only. Server validation fixes chain, recipient, value ceiling, empty calldata, fee ceiling, total spending ceiling and rate limit. One Durable Object serializes nonces. No mainnet transaction is supported.
+The app never holds a user's key. A new, isolated testnet-only demo signer is stored only in Cloudflare secrets and checked against `DEMO_SIGNER_ADDRESS`. Owner actions require `OWNER_TOKEN`; public endpoints are read-only. Server validation fixes chain, recipient, value ceiling, empty calldata, fee ceiling, total spending ceiling and rate limit. The RPC's live `eth_chainId` must equal `688689` both when a job is accepted and immediately before submission. No mainnet transaction is supported.
+
+The Durable Object stores an explicit per-signer lease, nonce reservation, signed bytes and deterministic transaction hash. This is the serialization boundary across external RPC awaits; correctness does not depend on JavaScript request handlers remaining sequential. A crashed or ambiguous submission is reconciled by hash and may only re-send the identical signed bytes before another nonce is allocated.
 
 The preferred gas threshold is only an optimization preference. At the deadline it is bypassed, but `maxAuthorizedFeeWei` and the aggregate ceiling are never bypassed. If fresh-enough fee data, RPC access, funding, or authorization is unavailable at the deadline, the job records `DEADLINE_FAILURE` with timestamps. Network availability and mining/finality cannot be guaranteed.
 
@@ -27,7 +29,7 @@ Terminal alternatives are `FAILED`, `CANCELLED`, and `DEADLINE_FAILURE`. Alarm t
 - Like-for-like baseline = actual `gasUsed × request-time gas price`.
 - Difference = like-for-like baseline − actual fee; percentage uses the like-for-like baseline. It may be zero or negative.
 
-All arithmetic uses `BigInt`. Current gas never substitutes for receipt `effectiveGasPrice`; estimates are not described as actual savings.
+All arithmetic uses `BigInt`. Current gas never substitutes for receipt `effectiveGasPrice`; estimates are not described as actual savings. A mined receipt without `effectiveGasPrice` is retained as known but fee accounting stays pending: the conservative reservation remains held and the transaction is not rebroadcast.
 
 ## Development
 
