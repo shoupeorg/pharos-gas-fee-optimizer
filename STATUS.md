@@ -2,6 +2,20 @@
 
 Updated: 2026-10-24
 
+## Consolidated correctness pass (2026-10-24)
+
+- Funding and every signing/broadcast path remained paused during this pass; all submission tests use controlled RPC mocks and an isolated test key.
+- Selected and enforced one-outstanding-job scope. A second job is rejected atomically before budget reservation. `UNRESOLVED` or fee-pending signed work continues to block acceptance rather than risk a replacement transfer.
+- Added revision compare-and-set to all state writers and fenced recovery leases across nonce reservation, signing, broadcast, reconciliation, receipt handling and errors. Stale callbacks cannot regress a newer state or transaction identity.
+- Job, ledger reservation and initial recovery alarm are persisted in one transaction. Alarm recomputation reads current durable state transactionally, so competing schedulers retain the earliest current requirement.
+- Cancellation and submission now meet at the nonce-reservation transaction: cancellation before it prevents signing/broadcast; after it cancellation is refused and funds remain reserved.
+- RPC acknowledgement and receipt identity are checked against the locally signed hash. Receipt quantities and all RPC quantities fail closed when malformed.
+- Bounded reconciliation resends only identical bytes. After 30 minutes without a transaction/receipt the job becomes `UNRESOLVED`, keeps its reservation, slows polling and never creates a replacement.
+- Deadline evidence now separates scheduled alarm, handler wake, decision, actual broadcast attempt, acknowledgement and confirmation. Lateness uses the real attempt time; stale observations are rejected.
+- Fixed signed percentage padding, negative unit formatting, sub-gwei display, explicit UTC parsing and visible PHRS/wei comparison rows for successful or failed mined receipts.
+- Gas history is accurately described as saved observations collected during authenticated acceptance/job processing. Atlantic runtime transport is JSON-RPC; MCP remains foundation evidence only.
+- Local controlled verification: 27 race, crash, validation, time-zone, arithmetic and state-machine tests passed; production build passed. Installed Wrangler runtime types also confirm alarm operations participate in Durable Object storage transactions. Live deployment/public verification remains to be performed once after publication. Receipt-based evidence remains pending explicit funding authorization.
+
 ## Durability correction (2026-10-24)
 
 - Funding and all broadcasts remain paused. No live job, evidence capture, signing, or chain write was performed for this correction.

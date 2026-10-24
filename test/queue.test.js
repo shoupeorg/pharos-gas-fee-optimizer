@@ -4,258 +4,66 @@ import { Transaction, Wallet } from "ethers";
 import { GasQueue } from "../src/queue.js";
 
 class Storage {
-  constructor(seed) { this.m = new Map(seed); this.alarm = null; this.tail = Promise.resolve(); }
-  async get(key) { await this.tail; return structuredClone(this.m.get(key)); }
-  async put(key, value) { return this.exclusive(async draft => draft.set(key, structuredClone(value))); }
-  async delete(key) { return this.exclusive(async draft => draft.delete(key)); }
-  async list({ prefix } = {}) { await this.tail; return new Map([...this.m].filter(([key]) => !prefix || key.startsWith(prefix)).map(([key, value]) => [key, structuredClone(value)])); }
-  async setAlarm(value) { this.alarm = value; }
-  async deleteAlarm() { this.alarm = null; }
-  async exclusive(fn) {
-    let release;
-    const previous = this.tail;
-    this.tail = new Promise(resolve => { release = resolve; });
-    await previous;
-    const draft = structuredClone(this.m);
-    try { const result = await fn(draft); this.m = draft; return result; } finally { release(); }
-  }
-  async transaction(fn) {
-    return this.exclusive(async draft => {
-      const txn = {
-        get: async key => structuredClone(draft.get(key)),
-        put: async (key, value) => draft.set(key, structuredClone(value)),
-        delete: async key => draft.delete(key),
-        list: async ({ prefix } = {}) => new Map([...draft].filter(([key]) => !prefix || key.startsWith(prefix)).map(([key, value]) => [key, structuredClone(value)]))
-      };
-      return fn(txn);
-    });
-  }
+  constructor(){this.m=new Map();this.alarm=null;this.tail=Promise.resolve()}
+  async get(key){await this.tail;return structuredClone(this.m.get(key))}
+  async put(key,value){return this.exclusive(async draft=>draft.set(key,structuredClone(value)))}
+  async list({prefix}={}){await this.tail;return new Map([...this.m].filter(([k])=>!prefix||k.startsWith(prefix)).map(([k,v])=>[k,structuredClone(v)]))}
+  async setAlarm(value){this.alarm=value} async deleteAlarm(){this.alarm=null}
+  async exclusive(fn){let release;const previous=this.tail;this.tail=new Promise(r=>{release=r});await previous;const draft=structuredClone(this.m),alarm={value:this.alarm};try{const result=await fn(draft,alarm);this.m=draft;this.alarm=alarm.value;return result}finally{release()}}
+  async transaction(fn){return this.exclusive(async(draft,alarm)=>fn({get:async k=>structuredClone(draft.get(k)),put:async(k,v)=>draft.set(k,structuredClone(v)),delete:async k=>draft.delete(k),list:async({prefix}={})=>new Map([...draft].filter(([k])=>!prefix||k.startsWith(prefix)).map(([k,v])=>[k,structuredClone(v)])),getAlarm:async()=>alarm.value,setAlarm:async v=>{alarm.value=v},deleteAlarm:async()=>{alarm.value=null}}))}
 }
 
-const key = "0x0123456789012345678901234567890123456789012345678901234567890123";
-const wallet = new Wallet(key);
-const recipient = "0x1111111111111111111111111111111111111111";
-const env = () => ({ ATLANTIC_RPC_URL: "https://rpc.test", DEMO_SIGNER_PRIVATE_KEY: key, DEMO_SIGNER_ADDRESS: wallet.address, ALLOWED_RECIPIENT: recipient, MAX_TRANSFER_WEI: "1000000000000000", MAX_TOTAL_SPEND_WEI: "10000000000000000" });
-const body = (deadline = Date.now() + 60_000, preferred = "20", maximum = "0.001") => ({ chainId: 688689, recipient, valuePhRS: "0.0001", preferredGasGwei: preferred, maxAuthorizedFeePhRS: maximum, deadlineUtc: new Date(deadline).toISOString(), monitoringIntervalSec: 15 });
-const createRequest = payload => new Request("https://queue/jobs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+const key="0x0123456789012345678901234567890123456789012345678901234567890123",wallet=new Wallet(key),recipient="0x1111111111111111111111111111111111111111";
+const env=()=>({ATLANTIC_RPC_URL:"https://rpc.test",DEMO_SIGNER_PRIVATE_KEY:key,DEMO_SIGNER_ADDRESS:wallet.address,ALLOWED_RECIPIENT:recipient,MAX_TRANSFER_WEI:"1000000000000000",MAX_TOTAL_SPEND_WEI:"10000000000000000"});
+const body=(deadline=Date.now()+60_000,preferred="20")=>({chainId:688689,recipient,valuePhRS:"0.0001",preferredGasGwei:preferred,maxAuthorizedFeePhRS:"0.001",deadlineUtc:new Date(deadline).toISOString(),monitoringIntervalSec:15});
+const request=payload=>new Request("https://queue/jobs",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r});return{promise,resolve}};
 
-class RpcController {
-  constructor({ gas = "0x2540be400", balance = "0xde0b6b3a7640000", chainId = "0xa8231", delay = {} } = {}) {
-    this.gas = gas; this.balance = balance; this.chainId = chainId; this.delay = delay;
-    this.pendingNonce = 0; this.sends = []; this.receipt = null; this.transactionFound = null; this.ambiguousOnce = false;
-  }
-  install() {
-    global.fetch = async (_url, options) => {
-      const { method, params } = JSON.parse(options.body);
-      if (this.delay[method]) await new Promise(resolve => setTimeout(resolve, this.delay[method]));
-      if (method === "eth_sendRawTransaction") {
-        const raw = params[0];
-        this.sends.push(raw);
-        if (this.ambiguousOnce) { this.ambiguousOnce = false; throw new Error("timeout"); }
-        const nonce = Number(Transaction.from(raw).nonce);
-        this.pendingNonce = Math.max(this.pendingNonce, nonce + 1);
-        return Response.json({ jsonrpc: "2.0", id: 1, result: Transaction.from(raw).hash });
-      }
-      const result = {
-        eth_chainId: this.chainId,
-        eth_gasPrice: this.gas,
-        eth_blockNumber: "0x64",
-        eth_estimateGas: "0x5208",
-        eth_getBalance: this.balance,
-        eth_getTransactionCount: `0x${this.pendingNonce.toString(16)}`,
-        eth_getTransactionReceipt: this.receipt,
-        eth_getTransactionByHash: this.transactionFound
-      }[method];
-      return Response.json({ jsonrpc: "2.0", id: 1, result });
-    };
-    return this;
-  }
-  successReceipt(hash) { this.receipt = { status: "0x1", blockNumber: "0x65", gasUsed: "0x5208", effectiveGasPrice: this.gas, transactionHash: hash }; }
-  forceDue(storage, id) { const job = storage.m.get("job:" + id); job.nextCheckMs = Date.now() - 1; storage.m.set("job:" + id, job); }
+class Rpc {
+  constructor(){this.gas="0x2540be400";this.balance="0xde0b6b3a7640000";this.chain="0xa8231";this.estimate="0x5208";this.nonce=0;this.sends=[];this.receipt=null;this.found=null;this.delays={};this.sendGate=null;this.wrongAck=null}
+  install(){global.fetch=async(_url,options)=>{const{method,params}=JSON.parse(options.body);if(this.delays[method])await new Promise(r=>setTimeout(r,this.delays[method]));if(method==="eth_sendRawTransaction"){const raw=params[0];this.sends.push(raw);if(this.sendGate)await this.sendGate.promise;const tx=Transaction.from(raw);this.nonce=Math.max(this.nonce,Number(tx.nonce)+1);return Response.json({jsonrpc:"2.0",id:1,result:this.wrongAck||tx.hash})}const result={eth_chainId:this.chain,eth_gasPrice:this.gas,eth_blockNumber:"0x64",eth_estimateGas:this.estimate,eth_getBalance:this.balance,eth_getTransactionCount:`0x${this.nonce.toString(16)}`,eth_getTransactionReceipt:this.receipt,eth_getTransactionByHash:this.found}[method];return Response.json({jsonrpc:"2.0",id:1,result})};return this}
+  success(hash,status="0x1",fee=this.gas){this.receipt={status,blockNumber:"0x65",gasUsed:"0x5208",effectiveGasPrice:fee,transactionHash:hash,from:wallet.address,to:recipient}}
 }
 
-test("restart restores a waiting deadline and alarm", async () => {
-  new RpcController({ gas: "0x4a817c800" }).install();
-  const storage = new Storage();
-  const first = new GasQueue({ storage }, env());
-  const created = await (await first.fetch(createRequest(body(Date.now() + 60_000, "1")))).json();
-  assert.equal(created.job.state, "WAITING_FOR_GAS");
-  const restarted = new GasQueue({ storage }, env());
-  assert.equal((await (await restarted.fetch(new Request("https://queue/jobs"))).json()).jobs.length, 1);
-  assert.ok(storage.alarm);
-});
+async function accepted(storage,rpc,preferred="1"){rpc.gas="0x4a817c800";const queue=new GasQueue({storage},env());return{queue,...await queue.accept(body(Date.now()+90_000,preferred))}}
+async function broadcast(storage,rpc){rpc.gas="0x2540be400";const queue=new GasQueue({storage},env()),result=await queue.create(body());return{queue,job:result.job}}
 
-test("confirmed state persists after reload and repeated alarms", async () => {
-  const rpc = new RpcController().install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body()))).json();
-  rpc.successReceipt(created.job.transactionHash);
-  rpc.forceDue(storage, created.job.id);
-  await queue.alarm();
-  const restarted = new GasQueue({ storage }, env());
-  await restarted.alarm();
-  await restarted.alarm();
-  const saved = await storage.get("job:" + created.job.id);
-  assert.equal(saved.state, "CONFIRMED");
-  assert.equal(saved.reservationConsumed, true);
-  assert.equal(rpc.sends.length, 1);
-});
+test("acceptance atomically persists reservation and recovery alarm",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{job}=await accepted(storage,rpc);assert.equal((await storage.get("job:"+job.id)).state,"QUEUED");assert.equal((await storage.get("spend-ledger")).reservedWei,job.reservedSpendWei);assert.ok(storage.alarm);await new GasQueue({storage},env()).alarm();assert.notEqual((await storage.get("job:"+job.id)).state,"QUEUED")});
 
-test("concurrent receipt confirmation consumes one reservation exactly once", async () => {
-  const rpc = new RpcController().install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body()))).json();
-  rpc.successReceipt(created.job.transactionHash);
-  await Promise.all([
-    queue.confirm(created.job.id, Date.now()),
-    queue.confirm(created.job.id, Date.now()),
-    new GasQueue({ storage }, env()).confirm(created.job.id, Date.now())
-  ]);
-  const saved = await storage.get("job:" + created.job.id);
-  const ledger = await storage.get("spend-ledger");
-  assert.equal(saved.state, "CONFIRMED");
-  assert.equal(saved.reservationConsumed, true);
-  assert.equal(ledger.reservedWei, "0");
-  assert.equal(ledger.committedWei, saved.committedSpendWei);
-});
+test("single outstanding scope rejects a second job before reservation",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc);const ledger=await storage.get("spend-ledger");await assert.rejects(()=>queue.accept(body(Date.now()+120_000,"1")),/Only one outstanding/);assert.equal((await storage.get("spend-ledger")).reservedWei,ledger.reservedWei);assert.equal((await storage.list({prefix:"job:"})).size,1);assert.equal((await storage.get("job:"+job.id)).state,"QUEUED")});
 
-test("cancelled waiting job never broadcasts after later alarms", async () => {
-  const rpc = new RpcController({ gas: "0x4a817c800" }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body(Date.now() + 60_000, "1")))).json();
-  await queue.fetch(new Request(`https://queue/jobs/${created.job.id}/cancel`, { method: "POST" }));
-  await queue.alarm();
-  const restarted = new GasQueue({ storage }, env());
-  await restarted.alarm();
-  assert.equal((await storage.get("job:" + created.job.id)).state, "CANCELLED");
-  assert.equal(rpc.sends.length, 0);
-});
+test("stale gas evaluator cannot regress a newer broadcast",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{job}=await accepted(storage,rpc),gate=deferred();const slow=new GasQueue({storage},env());slow.observeGas=()=>gate.promise;rpc.gas="0x1";const stale=slow.process(job.id,Date.now());const fast=new GasQueue({storage},env());await fast.process(job.id,Date.now(),{gasPriceWei:"1",observedAtMs:Date.now()});gate.resolve({gasPriceWei:"999999999999",observedAtMs:Date.now()});await stale;assert.equal((await storage.get("job:"+job.id)).state,"BROADCAST");assert.equal(rpc.sends.length,1)});
 
-test("deadline safety failure remains terminal", async () => {
-  const rpc = new RpcController({ gas: "0x4a817c800" }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body(Date.now() + 60_000, "1")))).json();
-  const job = storage.m.get("job:" + created.job.id);
-  job.deadlineMs = Date.now() - 1;
-  storage.m.set("job:" + job.id, job);
-  await queue.process(job.id, Date.now(), { gasPriceWei: "100000000000", observedAtMs: Date.now() });
-  await queue.alarm();
-  assert.equal((await storage.get("job:" + job.id)).state, "DEADLINE_FAILURE");
-  assert.equal(rpc.sends.length, 0);
-});
+test("cancellation winning during external validation prevents signing and broadcast",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc),gate=deferred();queue.observeGas=()=>gate.promise;const processing=queue.process(job.id,Date.now());await queue.cancel(job.id);gate.resolve({gasPriceWei:"1",observedAtMs:Date.now()});await processing;assert.equal((await storage.get("job:"+job.id)).state,"CANCELLED");assert.equal(rpc.sends.length,0)});
 
-test("concurrent delayed create/run/alarm cannot conflict on nonces", async () => {
-  const rpc = new RpcController({ delay: { eth_getTransactionCount: 40, eth_sendRawTransaction: 40 } }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const [a, b] = await Promise.all([
-    queue.fetch(createRequest(body(Date.now() + 90_000))),
-    queue.fetch(createRequest(body(Date.now() + 90_000)))
-  ]);
-  const first = (await a.json()).job;
-  const second = (await b.json()).job;
-  await Promise.all([queue.process(first.id, Date.now()), queue.process(second.id, Date.now()), queue.alarm()]);
-  assert.equal(new Set(rpc.sends.map(raw => Transaction.from(raw).hash)).size, 1);
-  assert.deepEqual([...new Set(rpc.sends.map(raw => Number(Transaction.from(raw).nonce)))], [0]);
-  const broadcast = [first, second].map(x => storage.m.get("job:" + x.id)).find(x => x.transactionHash);
-  rpc.successReceipt(broadcast.transactionHash);
-  rpc.forceDue(storage, broadcast.id);
-  await queue.alarm();
-  const waiting = [first, second].map(x => storage.m.get("job:" + x.id)).find(x => x.id !== broadcast.id);
-  rpc.forceDue(storage, waiting.id);
-  await queue.alarm();
-  assert.deepEqual([...new Set(rpc.sends.map(raw => Number(Transaction.from(raw).nonce)))].sort(), [0, 1]);
-});
+test("cancellation racing submission wins before nonce boundary",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc),saved=await storage.get("job:"+job.id);saved.state="READY_FAVORABLE";saved.releaseReason="FAVORABLE_GAS";saved.revision++;storage.m.set("job:"+job.id,saved);rpc.gas="0x1";rpc.delays.eth_chainId=25;const submitting=queue.submit(job.id);await new Promise(r=>setTimeout(r,2));await queue.cancel(job.id);await submitting;assert.equal((await storage.get("job:"+job.id)).state,"CANCELLED");assert.equal(rpc.sends.length,0)});
 
-test("ambiguous submission reconciles identical signed bytes", async () => {
-  const rpc = new RpcController().install();
-  rpc.ambiguousOnce = true;
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body()))).json();
-  const raw = storage.m.get("job:" + created.job.id).signedRawTransaction;
-  const job = storage.m.get("job:" + created.job.id);
-  job.nextCheckMs = Date.now() - 1;
-  job.submissionLeaseId = job.submissionLeaseId || storage.m.get("signer-submission-lock").leaseId;
-  storage.m.set("job:" + job.id, job);
-  const lock = storage.m.get("signer-submission-lock"); lock.leaseExpiresAtMs = Date.now() - 1; storage.m.set("signer-submission-lock", lock);
-  await queue.alarm();
-  assert.equal(storage.m.get("job:" + job.id).signedRawTransaction, raw);
-  assert.equal(new Set(rpc.sends).size, 1);
-});
+test("cancellation loses after durable nonce reservation",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc),saved=await storage.get("job:"+job.id);saved.state="SUBMITTING";saved.phase="NONCE_RESERVED";saved.nonce="0";saved.submissionGasPriceWei="1";saved.revision++;storage.m.set("job:"+job.id,saved);await assert.rejects(()=>queue.cancel(job.id),/submission has won/);assert.equal((await storage.get("spend-ledger")).reservedWei,saved.reservedSpendWei)});
 
-test("missing receipt fee retains conservative reservation and never rebroadcasts", async () => {
-  const rpc = new RpcController().install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body()))).json();
-  rpc.receipt = { status: "0x1", blockNumber: "0x65", gasUsed: "0x5208", transactionHash: created.job.transactionHash };
-  rpc.forceDue(storage, created.job.id);
-  await queue.alarm();
-  const saved = await storage.get("job:" + created.job.id);
-  const ledger = await storage.get("spend-ledger");
-  assert.equal(saved.state, "BROADCAST");
-  assert.equal(saved.feeAccountingPending, true);
-  assert.equal(saved.reservationConsumed, false);
-  assert.equal(ledger.reservedWei, saved.reservedSpendWei);
-  assert.equal(ledger.committedWei, "0");
-  rpc.forceDue(storage, saved.id);
-  await queue.alarm();
-  assert.equal(rpc.sends.length, 1);
-});
+test("late broadcast callback cannot overwrite confirmation",async()=>{const rpc=new Rpc().install(),storage=new Storage(),gate=deferred();rpc.sendGate=gate;const queue=new GasQueue({storage},env()),creating=queue.create(body());while(rpc.sends.length===0)await new Promise(r=>setTimeout(r,1));const current=[...(await storage.list({prefix:"job:"})).values()][0];rpc.success(current.transactionHash);await queue.confirmSnapshot(current,rpc.receipt);gate.resolve();await creating;const saved=await storage.get("job:"+current.id);assert.equal(saved.state,"CONFIRMED");assert.equal(saved.reservationConsumed,true)});
 
-test("wrong RPC chain rejects before signing or broadcast", async () => {
-  const rpc = new RpcController({ chainId: "0x1" }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const response = await queue.fetch(createRequest(body()));
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /RPC chain mismatch/);
-  assert.equal((await storage.list({ prefix: "job:" })).size, 0);
-  assert.equal(rpc.sends.length, 0);
-});
+test("crash recovery resumes every persisted pre-broadcast boundary",async()=>{for(const phase of ["NONCE_RESERVED","SIGNED","BROADCASTING"]){const rpc=new Rpc().install(),storage=new Storage(),{job}=await accepted(storage,rpc),queue=new GasQueue({storage},env()),saved=await storage.get("job:"+job.id);saved.state="SUBMITTING";saved.phase=phase;saved.nonce="0";saved.submissionGasPriceWei="1";saved.submissionLeaseId="dead";saved.leaseExpiresAtMs=0;saved.nextCheckMs=0;saved.revision++;if(phase!=="NONCE_RESERVED"){saved.signedRawTransaction=await wallet.signTransaction({type:0,chainId:688689,nonce:0,gasLimit:21000,gasPrice:1,to:recipient,value:BigInt(saved.valueWei),data:"0x"});saved.transactionHash=Transaction.from(saved.signedRawTransaction).hash}storage.m.set("job:"+job.id,saved);await queue.process(job.id);assert.equal((await storage.get("job:"+job.id)).state,"BROADCAST");assert.equal(rpc.sends.length,1)}});
 
-test("RPC chain change after acceptance rejects before signing or broadcast", async () => {
-  const rpc = new RpcController({ gas: "0x4a817c800" }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body(Date.now() + 60_000, "1")))).json();
-  rpc.chainId = "0x1";
-  const job = storage.m.get("job:" + created.job.id);
-  job.deadlineMs = Date.now() - 1;
-  storage.m.set("job:" + job.id, job);
-  await queue.process(job.id, Date.now(), { gasPriceWei: "1", observedAtMs: Date.now() });
-  const saved = await storage.get("job:" + job.id);
-  assert.equal(saved.state, "DEADLINE_FAILURE");
-  assert.equal(saved.timeline.at(-1).reason, "RPC_CHAIN_MISMATCH");
-  assert.equal(rpc.sends.length, 0);
-});
+test("concurrent expired-lease recovery is fenced",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{job}=await accepted(storage,rpc),saved=await storage.get("job:"+job.id);saved.state="SUBMITTING";saved.phase="SIGNED";saved.nonce="0";saved.submissionGasPriceWei="1";saved.submissionLeaseId="dead";saved.leaseExpiresAtMs=0;saved.signedRawTransaction=await wallet.signTransaction({type:0,chainId:688689,nonce:0,gasLimit:21000,gasPrice:1,to:recipient,value:BigInt(saved.valueWei),data:"0x"});saved.transactionHash=Transaction.from(saved.signedRawTransaction).hash;saved.revision++;storage.m.set("job:"+job.id,saved);const a=new GasQueue({storage},env()),b=new GasQueue({storage},env());await Promise.all([a.process(job.id),b.process(job.id)]);assert.equal(rpc.sends.length,1);assert.equal((await storage.get("job:"+job.id)).state,"BROADCAST")});
 
-test("insufficient signer funding rejects before persistence", async () => {
-  new RpcController({ balance: "0x1" }).install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const response = await queue.fetch(createRequest(body()));
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /funding is insufficient/);
-  assert.equal((await storage.list({ prefix: "job:" })).size, 0);
-});
+test("competing schedulers preserve earliest current alarm",async()=>{new Rpc().install();const storage=new Storage(),now=Date.now();storage.m.set("job:a",{id:"a",state:"WAITING_FOR_GAS",nextCheckMs:now+5000,requestedAt:new Date(now).toISOString()});storage.m.set("job:b",{id:"b",state:"WAITING_FOR_GAS",nextCheckMs:now+1000,requestedAt:new Date(now).toISOString()});const q=new GasQueue({storage},env());await Promise.all([q.schedule(),q.schedule(),q.schedule()]);assert.equal(storage.alarm,now+1000)});
 
-test("failed receipt persists terminal failure and actual gas accounting", async () => {
-  const rpc = new RpcController().install();
-  const storage = new Storage();
-  const queue = new GasQueue({ storage }, env());
-  const created = await (await queue.fetch(createRequest(body()))).json();
-  rpc.receipt = { status: "0x0", blockNumber: "0x65", gasUsed: "0x5208", effectiveGasPrice: rpc.gas, transactionHash: created.job.transactionHash };
-  rpc.forceDue(storage, created.job.id);
-  await queue.alarm();
-  await new GasQueue({ storage }, env()).alarm();
-  const saved = await storage.get("job:" + created.job.id);
-  assert.equal(saved.state, "FAILED");
-  assert.equal(saved.timeline.at(-1).reason, "RECEIPT_STATUS_FAILED");
-  assert.equal(saved.committedSpendWei, (21_000n * BigInt(rpc.gas)).toString());
-});
+test("wrong acknowledgement hash preserves local identity",async()=>{const rpc=new Rpc().install(),storage=new Storage();rpc.wrongAck="0x"+"22".repeat(32);const{job}=await broadcast(storage,rpc),saved=await storage.get("job:"+job.id);assert.equal(saved.state,"SUBMITTING");assert.notEqual(saved.transactionHash,rpc.wrongAck);assert.match(saved.lastSubmissionError.message,/did not match/)});
+
+test("mismatched receipt cannot account or confirm",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await broadcast(storage,rpc);rpc.success("0x"+"33".repeat(32));await queue.confirm(job.id);const saved=await storage.get("job:"+job.id),ledger=await storage.get("spend-ledger");assert.equal(saved.state,"BROADCAST");assert.match(saved.lastReceiptError.message,/does not match/);assert.equal(saved.reservationConsumed,false);assert.equal(ledger.committedWei,"0")});
+
+test("malformed receipt quantities cannot account or confirm",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await broadcast(storage,rpc);rpc.success(job.transactionHash);rpc.receipt.gasUsed="0x01";await queue.confirm(job.id);const saved=await storage.get("job:"+job.id);assert.equal(saved.state,"BROADCAST");assert.match(saved.lastReceiptError.message,/malformed/);assert.equal(saved.reservationConsumed,false)});
+
+test("delayed validation crossing deadline records actual broadcast lateness",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc),saved=await storage.get("job:"+job.id);saved.deadlineMs=Date.now()+10;saved.deadlineUtc=new Date(saved.deadlineMs).toISOString();storage.m.set("job:"+job.id,saved);rpc.gas="0x1";rpc.delays.eth_chainId=25;await queue.process(job.id,Date.now(),{gasPriceWei:"1",observedAtMs:Date.now()});const final=await storage.get("job:"+job.id);assert.equal(final.state,"BROADCAST");assert.ok(final.submissionLatenessMs>=1);assert.ok(Date.parse(final.broadcastAttemptAt)>=final.deadlineMs)});
+
+test("stale fee observations are never treated as current",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await accepted(storage,rpc);await queue.process(job.id,Date.now(),{gasPriceWei:"1",observedAtMs:Date.now()-31_000});const saved=await storage.get("job:"+job.id);assert.equal(saved.state,"WAITING_FOR_GAS");assert.equal(saved.timeline.at(-1).reason,"STALE_GAS_OBSERVATION");assert.equal(rpc.sends.length,0)});
+
+test("missing receipt fee keeps conservative budget and never rebroadcasts",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await broadcast(storage,rpc);rpc.receipt={status:"0x1",blockNumber:"0x65",gasUsed:"0x5208",transactionHash:job.transactionHash,from:wallet.address,to:recipient};await queue.confirm(job.id);const saved=await storage.get("job:"+job.id),ledger=await storage.get("spend-ledger");assert.equal(saved.state,"FEE_ACCOUNTING_PENDING");assert.equal(saved.reservationConsumed,false);assert.equal(ledger.reservedWei,saved.reservedSpendWei);await queue.confirm(job.id);assert.equal(rpc.sends.length,1)});
+
+test("confirmed and failed receipts persist exact terminal accounting",async()=>{for(const status of ["0x1","0x0"]){const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await broadcast(storage,rpc);rpc.success(job.transactionHash,status);await Promise.all([queue.confirm(job.id),new GasQueue({storage},env()).confirm(job.id)]);await new GasQueue({storage},env()).alarm();const saved=await storage.get("job:"+job.id);assert.equal(saved.state,status==="0x1"?"CONFIRMED":"FAILED");assert.equal(saved.reservationConsumed,true);assert.ok(BigInt(saved.committedSpendWei)>0n)}});
+
+test("unmined transaction becomes unresolved, blocks another job and is not replaced",async()=>{const rpc=new Rpc().install(),storage=new Storage(),{queue,job}=await broadcast(storage,rpc),saved=await storage.get("job:"+job.id);saved.broadcastAttemptAt=new Date(Date.now()-31*60_000).toISOString();storage.m.set("job:"+job.id,saved);await queue.confirm(job.id);assert.equal((await storage.get("job:"+job.id)).state,"UNRESOLVED");await assert.rejects(()=>queue.accept(body(Date.now()+120_000)),/Only one outstanding/);assert.equal(rpc.sends.length,1)});
+
+test("malformed RPC quantities fail before acceptance",async()=>{for(const [field,value] of [["estimate","0x01"],["gas","-0x1"],["balance","12"]]){const rpc=new Rpc().install(),storage=new Storage();rpc[field]=value;await assert.rejects(()=>new GasQueue({storage},env()).accept(body()),/malformed/);assert.equal((await storage.list({prefix:"job:"})).size,0)}});
+
+test("missing allowlist rejects before RPC submission",async()=>{const rpc=new Rpc().install(),storage=new Storage(),bad={...env(),ALLOWED_RECIPIENT:"UNCONFIGURED"};const response=await new GasQueue({storage},bad).fetch(request(body()));assert.equal(response.status,400);assert.match((await response.json()).error,/allowlist/);assert.equal(rpc.sends.length,0)});

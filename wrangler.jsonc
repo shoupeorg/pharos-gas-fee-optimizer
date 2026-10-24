@@ -10,7 +10,7 @@
   "vars": {
     "ATLANTIC_RPC_URL": "https://atlantic.dplabs-internal.com",
     "CHAIN_ID": "688689",
-    "ENGINE_VERSION": "gas-fee-optimizer/0.2.0-durable-submission",
+    "ENGINE_VERSION": "gas-fee-optimizer/0.3.0-atomic-fenced",
     "ALLOWED_RECIPIENT": "0xF825689D4D6c5C2C306353E3A0905cB84bA234e0",
     "MAX_TRANSFER_WEI": "100000000000000",
     "MAX_TOTAL_SPEND_WEI": "2500000000000000"
