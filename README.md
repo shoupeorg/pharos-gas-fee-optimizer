@@ -46,7 +46,20 @@ npm run build
 npx wrangler dev
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md), [SKILL.md](SKILL.md), and [STATUS.md](STATUS.md). Real demonstrations are intentionally pending explicit funding authorization; fixtures never masquerade as chain evidence.
+See [ARCHITECTURE.md](ARCHITECTURE.md), [SKILL.md](SKILL.md), and [STATUS.md](STATUS.md). Fixtures never masquerade as chain evidence.
+
+## Receipt-verified demonstrations
+
+Two explicitly authorized 1-wei self-transfers were executed sequentially on Atlantic Testnet. The first reached a verified terminal receipt before the second was accepted. Both used the same restricted signer/recipient, and the second was released by the Durable Object alarm without a manual run request.
+
+| Demonstration | Release | Transaction | Actual fee | Request-time comparison |
+| --- | --- | --- | ---: | ---: |
+| Favorable gas | `FAVORABLE_GAS` | [`0x9c2d…04d8`](https://atlantic.pharosscan.xyz/tx/0x9c2de02b8b95557628620cc73e08cf0a2b71ccd42085c464f312655bf89204d8) | `210000000000000 wei` | `+0.00%` |
+| Deadline forced | `DEADLINE` | [`0xcba4…ebaa`](https://atlantic.pharosscan.xyz/tx/0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa) | `210000000000000 wei` | `+0.00%` |
+
+Gas stayed flat at 10 gwei, so savings were honestly zero. The deadline was `2026-10-24T13:10:19.956Z`; the scheduler woke at that timestamp, decided at `13:10:20.667Z`, and attempted broadcast at `13:10:21.535Z`, producing measured lateness of `1579 ms`. Total receipt-verified gas was `420000000000000 wei` (`0.00042 PHRS`). Including both 1-wei self-transfer values, the conservative aggregate accounting total was `420000000000002 wei` (`0.000420000000000002 PHRS`), below the `0.0025 PHRS` ceiling.
+
+Versioned records and raw saved timelines are in [`evidence/manifest-v1.json`](evidence/manifest-v1.json), [`evidence/favorable.json`](evidence/favorable.json), and [`evidence/deadline.json`](evidence/deadline.json). The public UI buttons **Load Favorable Example** and **Load Deadline Example** load the corresponding records and expose receipt explorer links.
 
 ## Limitations
 

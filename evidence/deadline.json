@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "authorized-demonstration/1.0.0",
+  "capturedAt": "2026-10-24T13:12:18.500Z",
+  "historical": true,
+  "readOnlyVerification": true,
+  "provenance": {
+    "application": "https://pharos-gas-fee-optimizer.shoupeorg.workers.dev",
+    "jobEndpoint": "https://pharos-gas-fee-optimizer.shoupeorg.workers.dev/api/jobs/94c39eb1-bae3-4c81-bc99-47bdbb55a7bf",
+    "rpcNetwork": "Pharos Atlantic Testnet",
+    "rpcChainId": 688689,
+    "receiptMethod": "eth_getTransactionReceipt",
+    "balanceMethod": "eth_getBalance"
+  },
+  "job": {
+    "id": "94c39eb1-bae3-4c81-bc99-47bdbb55a7bf",
+    "revision": 10,
+    "engineVersion": "gas-fee-optimizer/0.3.0-atomic-fenced",
+    "state": "CONFIRMED",
+    "phase": "CONFIRMED",
+    "chainId": 688689,
+    "sender": "0xF825689D4D6c5C2C306353E3A0905cB84bA234e0",
+    "recipient": "0xF825689D4D6c5C2C306353E3A0905cB84bA234e0",
+    "valueWei": "1",
+    "data": "0x",
+    "preferredGasWei": "0",
+    "maxAuthorizedFeeWei": "1000000000000000",
+    "deadlineUtc": "2026-10-24T13:10:19.956Z",
+    "deadlineMs": 1792847419956,
+    "monitoringIntervalSec": 15,
+    "requestReceivedAt": "2026-10-24T13:09:19.000Z",
+    "requestedAt": "2026-10-24T13:09:20.905Z",
+    "requestedAtMs": 1792847360905,
+    "initialGasPriceWei": "10000000000",
+    "initialGasEstimate": "21000",
+    "baselineEstimatedFeeWei": "210000000000000",
+    "reservedSpendWei": "1000000000000001",
+    "reservationId": "af8b3b35-5f48-46de-a3b2-ba05aa0ef335",
+    "reservationConsumed": true,
+    "nextCheckMs": null,
+    "scheduledAlarmAt": null,
+    "releaseReason": "DEADLINE",
+    "transactionHash": "0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa",
+    "nonce": "1",
+    "receipt": {
+      "status": "1",
+      "blockNumber": "31823648",
+      "gasUsed": "21000",
+      "effectiveGasPrice": "10000000000",
+      "transactionHash": "0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa",
+      "from": "0xf825689d4d6c5c2c306353e3a0905cb84ba234e0",
+      "to": "0xf825689d4d6c5c2c306353e3a0905cb84ba234e0"
+    },
+    "costComparison": {
+      "initialEstimatedFeeWei": "210000000000000",
+      "actualFeeWei": "210000000000000",
+      "likeForLikeBaselineWei": "210000000000000",
+      "differenceWei": "0",
+      "difference": {
+        "basisPoints": "0",
+        "percent": "+0.00%"
+      }
+    },
+    "broadcastAttempts": 1,
+    "timeline": [
+      {
+        "state": "QUEUED",
+        "at": "2026-10-24T13:09:20.905Z",
+        "reason": "REQUEST_ACCEPTED_AND_RECOVERY_ALARM_PERSISTED"
+      },
+      {
+        "state": "WAITING_FOR_GAS",
+        "at": "2026-10-24T13:09:20.905Z",
+        "reason": "ABOVE_PREFERRED"
+      },
+      {
+        "state": "WAITING_FOR_GAS",
+        "at": "2026-10-24T13:09:36.623Z",
+        "reason": "ABOVE_PREFERRED"
+      },
+      {
+        "state": "WAITING_FOR_GAS",
+        "at": "2026-10-24T13:09:52.332Z",
+        "reason": "ABOVE_PREFERRED"
+      },
+      {
+        "state": "WAITING_FOR_GAS",
+        "at": "2026-10-24T13:10:08.063Z",
+        "reason": "ABOVE_PREFERRED"
+      },
+      {
+        "state": "READY_DEADLINE",
+        "at": "2026-10-24T13:10:20.667Z",
+        "reason": "DEADLINE"
+      },
+      {
+        "state": "SUBMITTING",
+        "at": "2026-10-24T13:10:21.535Z",
+        "reason": "NONCE_RESERVED"
+      },
+      {
+        "state": "SUBMITTING",
+        "at": "2026-10-24T13:10:21.535Z",
+        "reason": "SIGNED_BYTES_PERSISTED"
+      },
+      {
+        "state": "SUBMITTING",
+        "at": "2026-10-24T13:10:21.535Z",
+        "reason": "BROADCAST_ATTEMPT_STARTED"
+      },
+      {
+        "state": "BROADCAST",
+        "at": "2026-10-24T13:10:21.744Z",
+        "reason": "RPC_ACKNOWLEDGED_EXPECTED_HASH"
+      },
+      {
+        "state": "CONFIRMED",
+        "at": "2026-10-24T13:10:31.924Z",
+        "reason": "RECEIPT_CONFIRMED"
+      }
+    ],
+    "actualHandlerWakeAt": "2026-10-24T13:10:19.956Z",
+    "decisionAt": "2026-10-24T13:10:20.667Z",
+    "submissionGasPriceWei": "10000000000",
+    "fence": 1,
+    "leaseExpiresAtMs": null,
+    "broadcastAttemptAt": "2026-10-24T13:10:21.535Z",
+    "submissionLatenessMs": 1579,
+    "rpcAcknowledgedAt": "2026-10-24T13:10:21.744Z",
+    "confirmedAt": "2026-10-24T13:10:31.924Z",
+    "feeAccountingPending": false,
+    "explorerUrl": "https://atlantic.pharosscan.xyz/tx/0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa",
+    "committedSpendWei": "210000000000001"
+  },
+  "rpcReceiptVerification": {
+    "verified": true,
+    "transactionHash": "0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa",
+    "blockHash": "0x3e71bbc6af095afb79a151c71fd4ed71b6c963c6e596b86786d030a6f5a039b8",
+    "blockNumber": "31823648",
+    "status": "1",
+    "from": "0xf825689d4d6c5c2c306353e3a0905cb84ba234e0",
+    "to": "0xf825689d4d6c5c2c306353e3a0905cb84ba234e0",
+    "gasUsed": "21000",
+    "effectiveGasPrice": "10000000000",
+    "actualFeeWei": "210000000000000"
+  },
+  "balanceAfterBothDemonstrationsWei": "99580000000000000",
+  "relevantGasHistory": [
+    {
+      "observedAt": "2026-10-24T13:09:20.427Z",
+      "observedAtMs": 1792847360427,
+      "chainId": 688689,
+      "blockNumber": "31823621",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    },
+    {
+      "observedAt": "2026-10-24T13:09:36.623Z",
+      "observedAtMs": 1792847376623,
+      "chainId": 688689,
+      "blockNumber": "31823625",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    },
+    {
+      "observedAt": "2026-10-24T13:09:52.332Z",
+      "observedAtMs": 1792847392332,
+      "chainId": 688689,
+      "blockNumber": "31823629",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    },
+    {
+      "observedAt": "2026-10-24T13:10:08.063Z",
+      "observedAtMs": 1792847408063,
+      "chainId": 688689,
+      "blockNumber": "31823638",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    },
+    {
+      "observedAt": "2026-10-24T13:10:20.667Z",
+      "observedAtMs": 1792847420667,
+      "chainId": 688689,
+      "blockNumber": "31823645",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    },
+    {
+      "observedAt": "2026-10-24T13:10:21.535Z",
+      "observedAtMs": 1792847421535,
+      "chainId": 688689,
+      "blockNumber": "31823647",
+      "gasPriceWei": "10000000000",
+      "source": "Pharos Atlantic JSON-RPC job-processing observation",
+      "error": null
+    }
+  ]
+}

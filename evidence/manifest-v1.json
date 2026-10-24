@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "authorized-demonstrations/1.0.0",
+  "capturedAt": "2026-10-24T13:12:18.500Z",
+  "chainId": 688689,
+  "signer": "0xF825689D4D6c5C2C306353E3A0905cB84bA234e0",
+  "examples": {
+    "favorable": {
+      "jobId": "6f769894-fe9b-4a72-80e8-78d42913bdd0",
+      "releaseReason": "FAVORABLE_GAS",
+      "transactionHash": "0x9c2de02b8b95557628620cc73e08cf0a2b71ccd42085c464f312655bf89204d8",
+      "state": "CONFIRMED",
+      "actualFeeWei": "210000000000000",
+      "evidencePath": "evidence/favorable.json"
+    },
+    "deadline": {
+      "jobId": "94c39eb1-bae3-4c81-bc99-47bdbb55a7bf",
+      "releaseReason": "DEADLINE",
+      "transactionHash": "0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa",
+      "state": "CONFIRMED",
+      "actualFeeWei": "210000000000000",
+      "evidencePath": "evidence/deadline.json"
+    }
+  }
+}

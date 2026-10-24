@@ -2,7 +2,19 @@
 
 Updated: 2026-10-24
 
-## Consolidated correctness pass (2026-10-24)
+## Authorized receipt-verified demonstrations (2026-10-24)
+
+- Verified the funded signer on Atlantic before execution: RPC chain ID `688689`, starting balance `0.1 PHRS`. No further funding was requested.
+- Executed exactly two sequential 1-wei self-transfers to the allowlisted signer. Job 1 reached `CONFIRMED` before job 2 was accepted; no additional jobs were created.
+- Favorable job `6f769894-fe9b-4a72-80e8-78d42913bdd0` released as `FAVORABLE_GAS`, transaction `0x9c2de02b8b95557628620cc73e08cf0a2b71ccd42085c464f312655bf89204d8`, receipt block `31823602`, actual fee `210000000000000 wei`.
+- Deadline job `94c39eb1-bae3-4c81-bc99-47bdbb55a7bf` remained above its zero-gwei preference through four saved scheduler observations and released as `DEADLINE`, without a manual run request. Transaction `0xcba4ec4af526727fe07922c4804ffebae636b5b001ed76b2eda631d07350ebaa`, receipt block `31823648`, actual fee `210000000000000 wei`.
+- Deadline `2026-10-24T13:10:19.956Z`; actual scheduler wake `2026-10-24T13:10:19.956Z`; decision `2026-10-24T13:10:20.667Z`; broadcast attempt `2026-10-24T13:10:21.535Z`; measured lateness `1579 ms`; RPC acknowledgement `2026-10-24T13:10:21.744Z`; confirmation `2026-10-24T13:10:31.924Z`.
+- Gas stayed at 10 gwei. Each request-time like-for-like baseline and actual receipt fee was `210000000000000 wei`, so savings are `+0.00%`, not inferred fluctuations.
+- Total actual gas expenditure: `420000000000000 wei` (`0.00042 PHRS`). Conservative ledger spend including the two 1-wei transfer values: `420000000000002 wei` (`0.000420000000000002 PHRS`), below the authorized `0.0025 PHRS` aggregate ceiling. Ending balance: `0.09958 PHRS`.
+- RPC receipt verification independently matched both transaction hashes, success status, sender/recipient, gas used and effective gas price. Versioned saved records are in `evidence/`; public copies back the two reviewer buttons.
+- Final local verification after adding the records: 27/27 tests passed and the production build passed. Publication/deployment verification is the only remaining stage.
+
+## Consolidated correctness pass (historical pre-authorization record, 2026-10-24)
 
 - Funding and every signing/broadcast path remained paused during this pass; all submission tests use controlled RPC mocks and an isolated test key.
 - Selected and enforced one-outstanding-job scope. A second job is rejected atomically before budget reservation. `UNRESOLVED` or fee-pending signed work continues to block acceptance rather than risk a replacement transfer.
@@ -16,7 +28,7 @@ Updated: 2026-10-24
 - Gas history is accurately described as saved observations collected during authenticated acceptance/job processing. Atlantic runtime transport is JSON-RPC; MCP remains foundation evidence only.
 - Local controlled verification: 27 race, crash, validation, time-zone, arithmetic and state-machine tests passed; production build passed. Installed Wrangler runtime types also confirm alarm operations participate in Durable Object storage transactions. Live deployment/public verification remains to be performed once after publication. Receipt-based evidence remains pending explicit funding authorization.
 
-## Durability correction (2026-10-24)
+## Durability correction (historical pre-authorization record, 2026-10-24)
 
 - Funding and all broadcasts remain paused. No live job, evidence capture, signing, or chain write was performed for this correction.
 - Fixed stale terminal-state persistence by committing the current transition and matching reservation ledger mutation in one storage transaction. Reservation IDs and consumed-state guards make repeated/concurrent completion idempotent.
@@ -45,7 +57,5 @@ Updated: 2026-10-24
 
 ## Remaining
 
-1. Publish and deploy the focused durability correction, then verify the public engine version and read-only endpoints.
-2. Only after separate authorization: fund `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0` with the previously documented bounds and capture receipt-verified demonstrations.
-
-No signer has been funded and no transaction has been signed or broadcast.
+1. Publish this final evidence/documentation commit and deploy the changed public evidence assets once.
+2. Verify the public reviewer buttons and both explorer transaction-detail links. No further transaction is authorized or required.
