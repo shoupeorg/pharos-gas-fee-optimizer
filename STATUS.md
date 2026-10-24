@@ -19,7 +19,7 @@ Updated: 2026-10-24
 ## Remaining
 
 1. Run `scripts/resume-publish-deploy.ps1` once in the normal Windows PowerShell. It pushes the existing commit, bulk-configures ignored secrets, deploys once and runs public verification.
-2. Request explicit authorization and minimal testnet funding for `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0`: recommended `0.003 PHRS`; hard application aggregate ceiling `0.001 PHRS`, transfers return to the same controlled address.
+2. Request explicit authorization and testnet funding for `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0`: minimum `0.0021 PHRS` to cover two sequential worst-case per-job fee authorizations plus the temporary self-transfer value; recommended `0.003 PHRS`; hard application aggregate committed-spend ceiling `0.0025 PHRS`. Transfers return to the same controlled address.
 3. Capture two receipt-verified automatic demonstrations, publish evidence and verify explorer links.
 4. Final remote/public audit.
 
