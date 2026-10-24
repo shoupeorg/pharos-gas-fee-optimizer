@@ -12,10 +12,13 @@ Updated: 2026-10-24
 - Final local suite: 21/21 tests passed; production Rollup build passed.
 - Generated one isolated Atlantic demo signer locally and persisted its key only in ignored secret files. Configured its own address as the sole approved, recoverable recipient. No secret was printed or committed.
 - Verified the local UI visually: approved Pharos logo, black desktop, blue Windows-style title bar, off-white panels, sharp borders, responsive layout, stable English labels and read-only disclosure all render correctly.
+- Initialized Git and committed the implementation. Created the public GitHub repository `shoupeorg/pharos-gas-fee-optimizer` through the authenticated browser session.
+- Sandbox Git publication is blocked by `cannot spawn sh: No such file or directory` / `could not read Username`; one normal-PowerShell resume script is ready.
+- Sandbox Wrangler secret configuration is blocked because non-interactive Wrangler cannot use the saved interactive session without `CLOUDFLARE_API_TOKEN`; no OAuth retry was started and no secret was changed remotely.
 
 ## Remaining
 
-1. Initialize/publish GitHub repository, configure Cloudflare secrets and deploy the unfunded read-only/scheduler application.
+1. Run `scripts/resume-publish-deploy.ps1` once in the normal Windows PowerShell. It pushes the existing commit, bulk-configures ignored secrets, deploys once and runs public verification.
 2. Request explicit authorization and minimal testnet funding for `0xF825689D4D6c5C2C306353E3A0905cB84bA234e0`: recommended `0.003 PHRS`; hard application aggregate ceiling `0.001 PHRS`, transfers return to the same controlled address.
 3. Capture two receipt-verified automatic demonstrations, publish evidence and verify explorer links.
 4. Final remote/public audit.
