@@ -1,0 +1,17 @@
+import test from"node:test";import assert from"node:assert/strict";import{validateJob,releaseDecision,nextWake,safeToSubmit,costComparison,canCancel}from"../src/engine.js";import{parseUnits,percentDifference}from"../src/math.js";
+const recipient="0x1111111111111111111111111111111111111111",config={allowedRecipient:recipient,maxTransferWei:"1000000000000000"};
+const input={chainId:688689,recipient,valuePhRS:"0.0001",preferredGasGwei:"1",maxAuthorizedFeePhRS:"0.001",deadlineUtc:"2030-01-01T00:00:00.000Z",monitoringIntervalSec:30};
+const job={...validateJob(input,Date.parse("2029-01-01"),config),initialGasPriceWei:"1000000000",initialGasEstimate:"21000",baselineEstimatedFeeWei:"21000000000000"};
+test("exact decimal arithmetic",()=>assert.equal(parseUnits("0.000000000000000001"),1n));
+test("immediate favorable release",()=>assert.equal(releaseDecision(job,{gasPriceWei:"1000000000"},job.deadlineMs-1000).state,"READY_FAVORABLE"));
+test("waiting then favorable release",()=>{assert.equal(releaseDecision(job,{gasPriceWei:"1000000001"},job.deadlineMs-1000).state,"WAITING_FOR_GAS");assert.equal(releaseDecision(job,{gasPriceWei:"999999999"},job.deadlineMs-1000).state,"READY_FAVORABLE")});
+test("deadline forces release above threshold",()=>{const d=releaseDecision(job,{gasPriceWei:"999999999999"},job.deadlineMs);assert.equal(d.state,"READY_DEADLINE");assert.equal(d.reason,"DEADLINE")});
+test("deadline exact boundary wins",()=>assert.equal(releaseDecision(job,{gasPriceWei:"0"},job.deadlineMs).reason,"DEADLINE"));
+test("next wake never passes deadline",()=>assert.equal(nextWake({...job,monitoringIntervalSec:300},job.deadlineMs-1000),job.deadlineMs));
+test("missing gas is not zero",()=>assert.equal(releaseDecision(job,null,job.deadlineMs-1).reason,"GAS_UNAVAILABLE"));
+test("job fee and aggregate ceilings",()=>{assert.equal(safeToSubmit(job,"1000000000","21000",{remainingSpendWei:"200000000000000"}).ok,true);assert.equal(safeToSubmit(job,"1000000000000","21000",{remainingSpendWei:"999999999999999999"}).reason,"CURRENT_FEE_EXCEEDS_JOB_MAXIMUM");assert.equal(safeToSubmit(job,"1000000000","21000",{remainingSpendWei:"1"}).reason,"AGGREGATE_SPENDING_CEILING")});
+test("infeasible and expired jobs reject",()=>{assert.throws(()=>validateJob({...input,deadlineUtc:"2020-01-01T00:00:00Z"},Date.now(),config),/future UTC/);assert.throws(()=>validateJob({...input,recipient:"0x2222222222222222222222222222222222222222"},Date.now(),config),/not approved/)});
+test("cancellation only before submission",()=>{assert.equal(canCancel({state:"WAITING_FOR_GAS"}),true);assert.equal(canCancel({state:"SUBMITTING"}),false)});
+test("exact fee and signed percentage comparison",()=>{const c=costComparison(job,{gasUsed:"21000",effectiveGasPrice:"900000000"});assert.equal(c.actualFeeWei,"18900000000000");assert.equal(c.likeForLikeBaselineWei,"21000000000000");assert.equal(c.differenceWei,"2100000000000");assert.equal(c.difference.basisPoints,"1000");assert.equal(percentDifference(100n,110n).basisPoints,"-1000")});
+test("failed receipt cannot have a cost comparison without fee fields",()=>assert.equal(costComparison(job,{gasUsed:"21000",effectiveGasPrice:null}),null));
+test("deadline lateness is representable exactly",()=>assert.equal(Math.max(0,job.deadlineMs+4321-job.deadlineMs),4321));

@@ -1,0 +1,22 @@
+{
+  "name": "pharos-gas-fee-optimizer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "rollup -c",
+    "check": "npm test && npm run build",
+    "deploy": "npm run build && wrangler deploy --no-bundle",
+    "dev": "wrangler dev"
+  },
+  "dependencies": { "ethers": "6.15.0" },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "29.0.0",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "rollup": "4.64.9",
+    "wrangler": "4.151.1"
+  },
+  "engines": { "node": ">=20" }
+}

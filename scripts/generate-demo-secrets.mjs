@@ -1,0 +1,3 @@
+import{randomBytes}from"node:crypto";import{writeFile,access}from"node:fs/promises";import{Wallet}from"ethers";
+try{await access(".dev.vars");throw new Error(".dev.vars already exists; refusing to replace the persisted signer.")}catch(e){if(e.code!=="ENOENT")throw e}
+const wallet=Wallet.createRandom(),ownerToken=randomBytes(32).toString("hex");await writeFile(".dev.vars",`DEMO_SIGNER_PRIVATE_KEY=${wallet.privateKey}\nDEMO_SIGNER_ADDRESS=${wallet.address}\nOWNER_TOKEN=${ownerToken}\n`,{mode:0o600});await writeFile(".signer-address",`${wallet.address}\n`,{mode:0o600});await writeFile(".owner-token",`${ownerToken}\n`,{mode:0o600});console.log(JSON.stringify({created:true,address:wallet.address,secretsPrinted:false,network:"Pharos Atlantic Testnet",chainId:688689},null,2));

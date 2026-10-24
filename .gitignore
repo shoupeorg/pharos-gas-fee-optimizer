@@ -1,0 +1,9 @@
+node_modules/
+.npm-cache/
+/worker.js
+.dev.vars
+.owner-token
+.signer-address
+.wrangler/
+.DS_Store
+*.log

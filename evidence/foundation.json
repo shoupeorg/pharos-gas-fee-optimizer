@@ -1,0 +1,27 @@
+{
+  "version": "foundation-v1",
+  "capturedAt": "2026-10-24T00:00:00Z",
+  "installedChainMcp": {
+    "getChainInfo": { "name": "Pharos", "chainId": 1672, "rpcUrl": "https://rpc.pharos.xyz", "nativeSymbol": "PROS", "latestBlock": "21107199" },
+    "gasPrice": { "gasPriceWei": "10000000000", "gasPriceGwei": "10", "maxPriorityFeePerGasWei": "0" },
+    "schemas": {
+      "get_gas_price": "no parameters",
+      "send_raw_transaction": { "rawTransaction": "0x-prefixed signed transaction bytes" },
+      "limitation": "No network selector; configured endpoint is Pacific Mainnet. The MCP never receives a private key."
+    }
+  },
+  "targetNetwork": {
+    "name": "Pharos Atlantic Testnet",
+    "chainId": 688689,
+    "chainIdHex": "0xa8231",
+    "rpcUrl": "https://atlantic.dplabs-internal.com",
+    "explorer": "https://atlantic.pharosscan.xyz",
+    "nativeSymbol": "PHRS"
+  },
+  "scheduler": {
+    "provider": "Cloudflare Durable Objects",
+    "mechanism": "alarm",
+    "delivery": "at-least-once",
+    "notes": "One alarm per object; retries use exponential backoff. Application transitions must be idempotent."
+  }
+}
